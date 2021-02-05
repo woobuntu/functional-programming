@@ -25,12 +25,25 @@ const curry = (f) => (callBack, ...restArguments) =>
 //     { a: 2, b: "b" },
 //     { a: 3, b: "c" },
 //   ],
+//   (iterator) => map(({ a, b }) => a)(iterator),
+//   (iterator) => filter((value) => value > 1)(iterator),
+//   (iterator) => reduce((prev, cur) => prev + cur)(iterator),
+//   console.log
+// );
+// 이렇게 작성할 수 있다는 것이고,
+// 이렇게 (인자)=>함수(인자)의 형태로 표현한 것은
+// listProcessing(
+//   [
+//     { a: 1, b: "a" },
+//     { a: 2, b: "b" },
+//     { a: 3, b: "c" },
+//   ],
 //   map(({ a, b }) => a),
 //   filter((value) => value > 1),
 //   reduce((prev, cur) => prev + cur),
 //   console.log
 // );
-// 이렇게 작성할 수 있어 훨씬 가독성이 좋다.
+// 이렇게 작성할 수 있다는 것으로, 훨씬 가독성이 좋다.
 // 즉, map, filter, reduce함수에 callBack만 전달해두면,
 // listProcessing하면서 futureArguments를 받을 때 해당 함수가 평가되는 것
 
@@ -140,4 +153,11 @@ const compoundFunctions = (firstFunction, ...restFunctions) => (...iterator) =>
 // compoundFunctions에서도 동일하게 작동하게끔 하기 위해서는
 // 첫번째로 적용시킬 함수를 따로 빼서 순환시킬 값에 적용시켜 도출된 값을 이후의 함수에 적용해야 한다는 것이다.
 
-module.exports = { map, filter, reduce, listProcessing, compoundFunctions };
+module.exports = {
+  map,
+  filter,
+  reduce,
+  listProcessing,
+  compoundFunctions,
+  curry,
+};
