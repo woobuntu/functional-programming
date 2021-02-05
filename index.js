@@ -1,11 +1,10 @@
-const curry = (f) => (immediatelyGivenArgument, ...restArguments) =>
+const curry = (f) => (callBack, ...restArguments) =>
   restArguments.length
-    ? f(immediatelyGivenArgument, ...restArguments)
-    : (...futureArguments) => f(immediatelyGivenArgument, ...futureArguments);
+    ? f(callBack, ...restArguments)
+    : (...futureArguments) => f(callBack, ...futureArguments);
 // curry는 특정 함수의 평가 시점을 조정하기 위한 함수이다.
-// 구체적으로는 해당 함수가 특정 개수 이상의 인자를 받았을 때 평가되게끔 하는 것이다.
-// 여기서는 2개 이상의 인자를 받으면 해당 함수가 평가되게끔 구현하였다.
-// 하필 2개로 짠 이유는 listProcessing과 compoundFunctions을 가독성 좋게 작성하기 위해서이다.
+// 여기서는 map, filter, reduce등의 함수가 콜백과 이터레이터를 나눠서 전달받을 수 있게끔 함으로써
+// listProcessing과 compoundFunctions의 가독성과 코드 작성의 편의성을 높이기 위한 것이다.
 // map, filter, reduce등의 함수에 curry함수를 적용해주기 전에는,
 // listProcessing(
 //   [
@@ -32,7 +31,7 @@ const curry = (f) => (immediatelyGivenArgument, ...restArguments) =>
 //   console.log
 // );
 // 이렇게 작성할 수 있어 훨씬 가독성이 좋다.
-// 즉, map, filter, reduce함수에 immediatelyGivenArgument만 전달해두면,
+// 즉, map, filter, reduce함수에 callBack만 전달해두면,
 // listProcessing하면서 futureArguments를 받을 때 해당 함수가 평가되는 것
 
 const map = curry((f, iterator) => {
