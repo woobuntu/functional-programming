@@ -159,6 +159,19 @@ const range = (limit) => {
   return response;
 };
 
+// 주어진 이터러블에서 최대 limit만큼만 잘라서 반환하는 함수
+const max = (limit, iterable) => {
+  const response = [];
+  for (const value of iterable) {
+    response.push(value);
+    if (response.length == limit) return response;
+  }
+  // 이터러블의 모든 값을 순회해도 limit에 못 미치는 경우가 있으니
+  return response;
+};
+
+// 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
+// max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
 const Reserve = {
   *range(limit) {
     for (let i = 0; i < limit; i++) yield i;
@@ -173,5 +186,6 @@ module.exports = {
   compoundFunctions,
   curry,
   range,
+  max,
   Reserve,
 };
