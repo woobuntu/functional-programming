@@ -47,9 +47,9 @@ const curry = (f) => (callBack, ...restArguments) =>
 // 즉, map, filter, reduce함수에 callBack만 전달해두면,
 // listProcessing하면서 futureArguments를 받을 때 해당 함수가 평가되는 것
 
-const map = curry((f, iterator) => {
+const map = curry((f, iterable) => {
   const response = [];
-  for (const value of iterator) {
+  for (const value of iterable) {
     response.push(f(value));
   }
   return response;
@@ -68,9 +68,9 @@ const map = curry((f, iterator) => {
 // }
 // console.log(map(([a, b]) => a, generator()));
 
-const filter = curry((f, iterator) => {
+const filter = curry((f, iterable) => {
   const response = [];
-  for (const value of iterator) {
+  for (const value of iterable) {
     if (f(value)) response.push(value);
   }
   return response;
@@ -82,12 +82,12 @@ const filter = curry((f, iterator) => {
 // }
 // console.log(filter(([a, b]) => a < 5, generator()));
 
-const reduce = curry((f, accumulatedValue, iterator) => {
-  if (!iterator) {
-    iterator = accumulatedValue[Symbol.iterator]();
-    accumulatedValue = iterator.next().value;
+const reduce = curry((f, accumulatedValue, iterable) => {
+  if (!iterable) {
+    iterable = accumulatedValue[Symbol.iterator]();
+    accumulatedValue = iterable.next().value;
   }
-  for (const currentValue of iterator) {
+  for (const currentValue of iterable) {
     accumulatedValue = f(accumulatedValue, currentValue);
     // 누적 값과 현재 값의 연산이라 이렇게 이름 지음
   }
@@ -97,7 +97,7 @@ const reduce = curry((f, accumulatedValue, iterator) => {
 // console.log(reduce((a, b) => a + b, 0, nums));
 // console.log(reduce((a, b) => a + b, nums));
 
-const listProcessing = (...args) => reduce((iterator, f) => f(iterator), args);
+const listProcessing = (...args) => reduce((iterable, f) => f(iterable), args);
 // listProcessing은
 // listProcessing(
 //   0,
@@ -110,25 +110,25 @@ const listProcessing = (...args) => reduce((iterator, f) => f(iterator), args);
 // 즉, 첫번째 인자로 주어지는 이터레이터에 함수를 누적적으로 적용시키는 과정이므로 일종의 reduce이다.
 // 그리고 listProcessing에 전달되는 인자들을 나머지 연산자를 이용하여 배열로 잡아내면 이 역시 이터레이터이다.
 
-// const reduce = curry((f, previous, iterator) => {
-//   // 1. f = (iterator, func) => func(iterator)
+// const reduce = curry((f, previous, iterable) => {
+//   // 1. f = (iterable, func) => func(iterable)
 //   // 1. previous = args
-//   // 1. iterator = undefined
-//   if (!iterator) {
-//     iterator = previous[Symbol.iterator]();
-//     previous = iterator.next().value;
+//   // 1. iterable = undefined
+//   if (!iterable) {
+//     iterable = previous[Symbol.iterator]();
+//     previous = iterable.next().value;
 //   }
-//   // 2. iterator = args[Symbol.iterator]();
+//   // 2. iterable = args[Symbol.iterator]();
 //   // 2. previous = args.next().value // 즉, args의 0번째 값
-//   for (const current of iterator) {
+//   for (const current of iterable) {
 //     previous = f(previous, current);
-//     // previous = ((iterator, func) => func(iterator))(함수 적용이 누적된 이터레이터, 적용할 함수)
+//     // previous = ((iterable, func) => func(iterable))(함수 적용이 누적된 이터레이터, 적용할 함수)
 //   }
 //   return previous;
 // });
 
-const compoundFunctions = (firstFunction, ...restFunctions) => (...iterator) =>
-  listProcessing(firstFunction(...iterator), ...restFunctions);
+const compoundFunctions = (firstFunction, ...restFunctions) => (...iterable) =>
+  listProcessing(firstFunction(...iterable), ...restFunctions);
 // compoundFunctions는
 // const f = compoundFunctions(
 //   (a, b) => a + b,
@@ -153,6 +153,18 @@ const compoundFunctions = (firstFunction, ...restFunctions) => (...iterator) =>
 // compoundFunctions에서도 동일하게 작동하게끔 하기 위해서는
 // 첫번째로 적용시킬 함수를 따로 빼서 순환시킬 값에 적용시켜 도출된 값을 이후의 함수에 적용해야 한다는 것이다.
 
+const range = (limit) => {
+  const response = [];
+  for (let i = 0; i < limit; i++) response.push(i);
+  return response;
+};
+
+const Reserve = {
+  *range(limit) {
+    for (let i = 0; i < limit; i++) yield i;
+  },
+};
+
 module.exports = {
   map,
   filter,
@@ -160,4 +172,6 @@ module.exports = {
   listProcessing,
   compoundFunctions,
   curry,
+  range,
+  Reserve,
 };
