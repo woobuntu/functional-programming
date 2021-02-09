@@ -176,6 +176,15 @@ const Reserve = {
   *range(limit) {
     for (let i = 0; i < limit; i++) yield i;
   },
+  *map(f, iterable) {
+    for (const value of iterable) yield f(value);
+  },
+  *filter(f, iterable) {
+    for (const value of iterable) if (f(iterable)) yield value;
+    // next메소드를 호출할 때마다 다음 yield문까지 실행
+    // 즉, 이 경우 f(iterable)이 true일 때만 yield하므로
+    // f(iterable)이 false인 경우 f(iterable)
+  },
 };
 
 module.exports = {
