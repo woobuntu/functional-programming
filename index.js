@@ -129,6 +129,8 @@ const max = curry((limit, iterable) => {
 
 const takeAll = max(Infinity);
 
+const isIterable = a => a && a[Symbol.iterator];
+
 // 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
 // max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
 const Reserve = {
@@ -146,6 +148,21 @@ const Reserve = {
   }),
   *entries(obj) {
     for (const key in obj) yield [key, obj[key]];
+  },
+  *flatten(iterable) {
+    for (const valueOfNext of iterable) {
+      if (isIterable(valueOfNext)) yield* valueOfNext;
+      // yield* 는 다른 제너레이터 혹은 이터러블에 yield를 위임하는 것이다.
+      else yield valueOfNext;
+    }
+  },
+  deepFlat: function* deepFlat(iterable) {
+    for (const valueOfNext of iterable) {
+      if (isIterable(valueOfNext)) yield* deepFlat(valueOfNext);
+      // yield* 는 다른 제너레이터 혹은 이터러블에 yield를 위임하는 것이다.
+      // 재귀로 호출하기 위해 기명함수로 작성
+      else yield valueOfNext;
+    }
   },
 };
 
@@ -231,6 +248,12 @@ const filter = curry((f, iterable) =>
   listProcessing(iterable, Reserve.filter(f), takeAll),
 );
 
+const flatten = compoundFunctions(Reserve.flatten, takeAll);
+// listProcessing([1, 2, 3, [4, 5], 6, 7], flatten, console.log);
+
+const deepFlat = compoundFunctions(Reserve.deepFlat, takeAll);
+listProcessing([1, 2, [3, [4], 5], 6, 7], deepFlat, console.log);
+
 module.exports = {
   map,
   filter,
@@ -244,5 +267,6 @@ module.exports = {
   join,
   objectToQueryString,
   find,
+  flatten,
   Reserve,
 };
