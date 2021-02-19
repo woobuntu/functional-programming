@@ -158,13 +158,6 @@ const max = curry((limit, iterable) => {
   return response;
 });
 
-const objectToQueryString = compoundFunctions(
-  Object.entries,
-  map(([key, value]) => `${key}=${value}`),
-  reduce((prevQuery, curQuery) => `${prevQuery}&${curQuery}`),
-);
-console.log(objectToQueryString({ limit: 10, offset: 10, type: 'notice' }));
-
 // 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
 // max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
 const Reserve = {
@@ -180,6 +173,9 @@ const Reserve = {
     // 즉, 이 경우 f(iterable)이 true일 때만 yield하므로
     // f(iterable)이 false인 경우 f(iterable)
   }),
+  *entries(obj) {
+    for (const key in obj) yield [key, obj[key]];
+  },
 };
 
 // listProcessing(
@@ -218,6 +214,23 @@ const Reserve = {
 // 재귀가 콜스택을 쌓아올려가는 반면, 제너레이터는 yield로 제어권을 즉각 반환하므로
 // 콜스택이 많이 쌓이지 않는다.
 
+// join이 reduce를 이용한다는 것은 join이 받을 값을 '지연(유보)'할 수 있다는 것!
+// Array.prototype.join보다(=클래스 기반의 추상화보다) 훨씬 유연함!(=다형성 높음!)
+const join = curry((separator = ',', iterable) =>
+  reduce((prev, cur) => `${prev}${separator}${cur}`, iterable),
+);
+
+const objectToQueryString = compoundFunctions(
+  Reserve.entries,
+  Reserve.map(([key, value]) => {
+    console.log([key, value]);
+    return `${key}=${value}`;
+  }),
+  // Reserve.map으로 넘겨줘도 정상 동작
+  join('&'),
+);
+// console.log(objectToQueryString({ limit: 10, offset: 10, type: 'notice' }));
+
 module.exports = {
   map,
   filter,
@@ -227,5 +240,7 @@ module.exports = {
   curry,
   range,
   max,
+  join,
+  objectToQueryString,
   Reserve,
 };
