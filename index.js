@@ -1,4 +1,6 @@
-const curry = (f) => (callBack, ...restArguments) =>
+const curry = f => (callBack, ...restArguments) =>
+  // 여기서 restArguments를 굳이 전개 연산자로 받는 이유는
+  // 혹시 넘겨주는 인자 값이 이터러블이 아닐 수도 있으니 해당 값을 이터러블로 만들어주기 위함
   restArguments.length
     ? f(callBack, ...restArguments)
     : (...futureArguments) => f(callBack, ...futureArguments);
@@ -13,7 +15,7 @@ const curry = (f) => (callBack, ...restArguments) =>
 //     { a: 3, b: "c" },
 //   ],
 //   (iterator) => map(({ a, b }) => a, iterator),
-//   (iterator) => filter((value) => value > 1, iterator),
+//   (iterator) => filter((valueOfNext) => valueOfNext > 1, iterator),
 //   (iterator) => reduce((prev, cur) => prev + cur, iterator),
 //   console.log
 // );
@@ -26,7 +28,7 @@ const curry = (f) => (callBack, ...restArguments) =>
 //     { a: 3, b: "c" },
 //   ],
 //   (iterator) => map(({ a, b }) => a)(iterator),
-//   (iterator) => filter((value) => value > 1)(iterator),
+//   (iterator) => filter((valueOfNext) => valueOfNext > 1)(iterator),
 //   (iterator) => reduce((prev, cur) => prev + cur)(iterator),
 //   console.log
 // );
@@ -39,7 +41,7 @@ const curry = (f) => (callBack, ...restArguments) =>
 //     { a: 3, b: "c" },
 //   ],
 //   map(({ a, b }) => a),
-//   filter((value) => value > 1),
+//   filter((valueOfNext) => valueOfNext > 1),
 //   reduce((prev, cur) => prev + cur),
 //   console.log
 // );
@@ -49,8 +51,11 @@ const curry = (f) => (callBack, ...restArguments) =>
 
 const map = curry((f, iterable) => {
   const response = [];
-  for (const value of iterable) {
-    response.push(f(value));
+  for (const valueOfNext of iterable) {
+    // for of문의 of가 iterable의 [Symbol.iterator]를 호출한다.
+    // 그 결과 반환되는 것이 well-formed 이터레이터이므로 연속해서 [Symbol.iterator]를 호출해도 계속
+    // well-formed 이터레이터 자신이 반환되므로 순회가 가능한 것
+    response.push(f(valueOfNext));
   }
   return response;
 });
@@ -70,8 +75,8 @@ const map = curry((f, iterable) => {
 
 const filter = curry((f, iterable) => {
   const response = [];
-  for (const value of iterable) {
-    if (f(value)) response.push(value);
+  for (const valueOfNext of iterable) {
+    if (f(valueOfNext)) response.push(valueOfNext);
   }
   return response;
 });
@@ -87,8 +92,8 @@ const reduce = curry((f, accumulatedValue, iterable) => {
     iterable = accumulatedValue[Symbol.iterator]();
     accumulatedValue = iterable.next().value;
   }
-  for (const currentValue of iterable) {
-    accumulatedValue = f(accumulatedValue, currentValue);
+  for (const valueOfNext of iterable) {
+    accumulatedValue = f(accumulatedValue, valueOfNext);
     // 누적 값과 현재 값의 연산이라 이렇게 이름 지음
   }
   return accumulatedValue;
@@ -109,23 +114,6 @@ const listProcessing = (...args) => reduce((iterable, f) => f(iterable), args);
 // 와 같이 이터레이터에 적용할 함수를 순차적으로 작성할 수 있게끔 하는 함수이다.
 // 즉, 첫번째 인자로 주어지는 이터레이터에 함수를 누적적으로 적용시키는 과정이므로 일종의 reduce이다.
 // 그리고 listProcessing에 전달되는 인자들을 나머지 연산자를 이용하여 배열로 잡아내면 이 역시 이터레이터이다.
-
-// const reduce = curry((f, previous, iterable) => {
-//   // 1. f = (iterable, func) => func(iterable)
-//   // 1. previous = args
-//   // 1. iterable = undefined
-//   if (!iterable) {
-//     iterable = previous[Symbol.iterator]();
-//     previous = iterable.next().value;
-//   }
-//   // 2. iterable = args[Symbol.iterator]();
-//   // 2. previous = args.next().value // 즉, args의 0번째 값
-//   for (const current of iterable) {
-//     previous = f(previous, current);
-//     // previous = ((iterable, func) => func(iterable))(함수 적용이 누적된 이터레이터, 적용할 함수)
-//   }
-//   return previous;
-// });
 
 const compoundFunctions = (firstFunction, ...restFunctions) => (...iterable) =>
   listProcessing(firstFunction(...iterable), ...restFunctions);
@@ -153,22 +141,22 @@ const compoundFunctions = (firstFunction, ...restFunctions) => (...iterable) =>
 // compoundFunctions에서도 동일하게 작동하게끔 하기 위해서는
 // 첫번째로 적용시킬 함수를 따로 빼서 순환시킬 값에 적용시켜 도출된 값을 이후의 함수에 적용해야 한다는 것이다.
 
-const range = (limit) => {
+const range = limit => {
   const response = [];
   for (let i = 0; i < limit; i++) response.push(i);
   return response;
 };
 
 // 주어진 이터러블에서 최대 limit만큼만 잘라서 반환하는 함수
-const max = (limit, iterable) => {
+const max = curry((limit, iterable) => {
   const response = [];
-  for (const value of iterable) {
-    response.push(value);
+  for (const valueOfNext of iterable) {
+    response.push(valueOfNext);
     if (response.length == limit) return response;
   }
   // 이터러블의 모든 값을 순회해도 limit에 못 미치는 경우가 있으니
   return response;
-};
+});
 
 // 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
 // max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
@@ -176,16 +164,52 @@ const Reserve = {
   *range(limit) {
     for (let i = 0; i < limit; i++) yield i;
   },
-  *map(f, iterable) {
-    for (const value of iterable) yield f(value);
-  },
-  *filter(f, iterable) {
-    for (const value of iterable) if (f(iterable)) yield value;
+  map: curry(function* (f, iterable) {
+    for (const valueOfNext of iterable) yield f(valueOfNext);
+  }),
+  filter: curry(function* (f, iterable) {
+    for (const valueOfNext of iterable) if (f(valueOfNext)) yield next;
     // next메소드를 호출할 때마다 다음 yield문까지 실행
     // 즉, 이 경우 f(iterable)이 true일 때만 yield하므로
     // f(iterable)이 false인 경우 f(iterable)
-  },
+  }),
 };
+
+// listProcessing(
+//   range(10),
+//   map(a => {
+//     console.log('map : ', a);
+//     return a + 10;
+//   }),
+//   filter(a => {
+//     console.log('filter : ', a);
+//     return a % 2;
+//   }),
+//   max(2),
+//   console.log,
+// );
+
+// listProcessing(
+//   Reserve.range(10),
+//   // well-formed 이터레이터 반환
+//   Reserve.map(a => {
+//     console.log('map : ', a);
+//     return a + 10;
+//   }),
+//   // well-formed 이터레이터 반환
+//   Reserve.filter(a => {
+//     console.log('filter : ', a);
+//     return a % 2;
+//   }),
+//   // well-formed 이터레이터 반환
+//   max(2),
+//   console.log,
+// );
+// for of문으로 next메소드가 호출될 때마다 next의 value값을 산정하기 위해
+// 이터레이터를 거슬러 올라가고, yield문을 실행하면서 next의 value값을
+// 뱉으면서 내려온다.
+// 재귀가 콜스택을 쌓아올려가는 반면, 제너레이터는 yield로 제어권을 즉각 반환하므로
+// 콜스택이 많이 쌓이지 않는다.
 
 module.exports = {
   map,

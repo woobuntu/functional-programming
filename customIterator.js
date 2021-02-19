@@ -3,20 +3,6 @@ const iterable = {
     let i = 3;
     return {
       next() {
-        return i == 0 ? { value: i, done: true } : { value: i--, done: false };
-      },
-      [Symbol.iterator]() {
-        return this;
-      },
-    };
-  },
-};
-
-const iterable = {
-  [Symbol.iterator]() {
-    let i = 3;
-    return {
-      next() {
         return i == 0 ? { val: i, done: true } : { val: i--, done: false };
       },
       [Symbol.iterator]() {
