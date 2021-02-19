@@ -149,13 +149,6 @@ const Reserve = {
   *entries(obj) {
     for (const key in obj) yield [key, obj[key]];
   },
-  *flatten(iterable) {
-    for (const valueOfNext of iterable) {
-      if (isIterable(valueOfNext)) yield* valueOfNext;
-      // yield* 는 다른 제너레이터 혹은 이터러블에 yield를 위임하는 것이다.
-      else yield valueOfNext;
-    }
-  },
   deepFlat: function* deepFlat(iterable) {
     for (const valueOfNext of iterable) {
       if (isIterable(valueOfNext)) yield* deepFlat(valueOfNext);
@@ -164,6 +157,8 @@ const Reserve = {
       else yield valueOfNext;
     }
   },
+  deepFlatMap: (f, iterable) =>
+    listProcessing(iterable, Reserve.deepFlat, Reserve.map(f)),
 };
 
 // listProcessing(
@@ -248,11 +243,15 @@ const filter = curry((f, iterable) =>
   listProcessing(iterable, Reserve.filter(f), takeAll),
 );
 
-const flatten = compoundFunctions(Reserve.flatten, takeAll);
-// listProcessing([1, 2, 3, [4, 5], 6, 7], flatten, console.log);
-
 const deepFlat = compoundFunctions(Reserve.deepFlat, takeAll);
-listProcessing([1, 2, [3, [4], 5], 6, 7], deepFlat, console.log);
+// listProcessing([1, 2, [3, [4], 5], 6, 7], deepFlat, console.log);
+
+const deepFlatMap = curry(compoundFunctions(Reserve.deepFlatMap, takeAll));
+// listProcessing(
+//   [1, 2, [3, [4], 5], 6, 7],
+//   deepFlatMap(v => v * v * v),
+//   console.log,
+// );
 
 module.exports = {
   map,
@@ -267,6 +266,7 @@ module.exports = {
   join,
   objectToQueryString,
   find,
-  flatten,
+  deepFlat,
+  deepFlatMap,
   Reserve,
 };
