@@ -159,6 +159,8 @@ const Reserve = {
   },
   deepFlatMap: (f, iterable) =>
     listProcessing(iterable, Reserve.deepFlat, Reserve.map(f)),
+  // 이 경우는 deepFlat의 계층이 깊어 결합법칙이 성립하지 않는다
+  // 때문에 map과 deepFlat의 순서가 바뀌어서는 안 된다.
 };
 
 // listProcessing(
