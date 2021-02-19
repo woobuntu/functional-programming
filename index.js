@@ -168,7 +168,7 @@ const Reserve = {
     for (const valueOfNext of iterable) yield f(valueOfNext);
   }),
   filter: curry(function* (f, iterable) {
-    for (const valueOfNext of iterable) if (f(valueOfNext)) yield next;
+    for (const valueOfNext of iterable) if (f(valueOfNext)) yield valueOfNext;
     // next메소드를 호출할 때마다 다음 yield문까지 실행
     // 즉, 이 경우 f(iterable)이 true일 때만 yield하므로
     // f(iterable)이 false인 경우 f(iterable)
@@ -231,6 +231,23 @@ const objectToQueryString = compoundFunctions(
 );
 // console.log(objectToQueryString({ limit: 10, offset: 10, type: 'notice' }));
 
+const find = curry((f, iterable) =>
+  listProcessing(
+    iterable,
+    Reserve.filter(v => f(v)),
+    max(1),
+    ([found]) => found,
+  ),
+);
+// 조건에 맞춰 filter하고, 최대 1개까지만 꺼내겠다는,
+// 아주 이해하기 쉬운 선언적 코드
+
+// listProcessing(
+//   [1, 2, 3],
+//   find(v => v % 2),
+//   console.log,
+// );
+
 module.exports = {
   map,
   filter,
@@ -242,5 +259,6 @@ module.exports = {
   max,
   join,
   objectToQueryString,
+  find,
   Reserve,
 };
