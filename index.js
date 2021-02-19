@@ -158,6 +158,13 @@ const max = curry((limit, iterable) => {
   return response;
 });
 
+const objectToQueryString = compoundFunctions(
+  Object.entries,
+  map(([key, value]) => `${key}=${value}`),
+  reduce((prevQuery, curQuery) => `${prevQuery}&${curQuery}`),
+);
+console.log(objectToQueryString({ limit: 10, offset: 10, type: 'notice' }));
+
 // 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
 // max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
 const Reserve = {
