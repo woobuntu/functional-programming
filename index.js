@@ -49,44 +49,6 @@ const curry = f => (callBack, ...restArguments) =>
 // 즉, map, filter, reduce함수에 callBack만 전달해두면,
 // listProcessing하면서 futureArguments를 받을 때 해당 함수가 평가되는 것
 
-const map = curry((f, iterable) => {
-  const response = [];
-  for (const valueOfNext of iterable) {
-    // for of문의 of가 iterable의 [Symbol.iterator]를 호출한다.
-    // 그 결과 반환되는 것이 well-formed 이터레이터이므로 연속해서 [Symbol.iterator]를 호출해도 계속
-    // well-formed 이터레이터 자신이 반환되므로 순회가 가능한 것
-    response.push(f(valueOfNext));
-  }
-  return response;
-});
-// 자바스크립트 내장 객체인 String객체나
-// 웹 API인 NodeList 같은 경우는 이터러블 프로토콜을 따름에도 불구하고
-// map이 내장 메소드로 구현되어 있지 않아 map을 사용할 수 없다.
-// 위와 같이 구현한 map함수는 적어도 이터러블 프로토콜을 지원하는 모든 데이터에 적용이 가능하다
-// (다형성이 높다! 클래스나 프로토타입보다 나은 이유!)
-// 그런데 제너레이터 함수를 이용하면 사실상 모든 데이터에 이터러블 프로토콜을 지원할 수 있다는 거!
-
-// function* generator() {
-//   yield [1, 2];
-//   yield [3, 4];
-//   yield [5, 6];
-// }
-// console.log(map(([a, b]) => a, generator()));
-
-const filter = curry((f, iterable) => {
-  const response = [];
-  for (const valueOfNext of iterable) {
-    if (f(valueOfNext)) response.push(valueOfNext);
-  }
-  return response;
-});
-// function* generator() {
-//   yield [1, 2];
-//   yield [3, 4];
-//   yield [5, 6];
-// }
-// console.log(filter(([a, b]) => a < 5, generator()));
-
 const reduce = curry((f, accumulatedValue, iterable) => {
   if (!iterable) {
     iterable = accumulatedValue[Symbol.iterator]();
@@ -98,6 +60,13 @@ const reduce = curry((f, accumulatedValue, iterable) => {
   }
   return accumulatedValue;
 });
+// 자바스크립트 내장 객체인 String객체나
+// 웹 API인 NodeList 같은 경우는 이터러블 프로토콜을 따름에도 불구하고
+// reduce가 내장 메소드로 구현되어 있지 않아 reduce를 사용할 수 없다.
+// 위와 같이 구현한 reduce함수는 적어도 이터러블 프로토콜을 지원하는 모든 데이터에 적용이 가능하다
+// (다형성이 높다! 클래스나 프로토타입보다 나은 이유!)
+// 그런데 제너레이터 함수를 이용하면 사실상 모든 데이터에 이터러블 프로토콜을 지원할 수 있다는 거!
+
 // const nums = [1, 2, 3, 4, 5];
 // console.log(reduce((a, b) => a + b, 0, nums));
 // console.log(reduce((a, b) => a + b, nums));
@@ -157,6 +126,8 @@ const max = curry((limit, iterable) => {
   // 이터러블의 모든 값을 순회해도 limit에 못 미치는 경우가 있으니
   return response;
 });
+
+const takeAll = max(Infinity);
 
 // 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
 // max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
@@ -248,6 +219,18 @@ const find = curry((f, iterable) =>
 //   console.log,
 // );
 
+const map = curry((f, iterable) =>
+  listProcessing(iterable, Reserve.map(f), takeAll),
+);
+// 아래처럼 축약할 수도 있지만 다시 볼 때 바로 이해 안 될 것 같아서 그냥 위의 형태 유지
+// const map = curry((f, iterable) =>
+//   listProcessing(Reserve.map(f, iterable), takeAll),
+// );
+// const map = curry(compoundFunctions(Reserve.map, takeAll));
+const filter = curry((f, iterable) =>
+  listProcessing(iterable, Reserve.filter(f), takeAll),
+);
+
 module.exports = {
   map,
   filter,
@@ -257,6 +240,7 @@ module.exports = {
   curry,
   range,
   max,
+  takeAll,
   join,
   objectToQueryString,
   find,
