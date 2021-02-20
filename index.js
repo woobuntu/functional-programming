@@ -49,15 +49,36 @@ const curry = f => (callBack, ...restArguments) =>
 // 즉, map, filter, reduce함수에 callBack만 전달해두면,
 // listProcessing하면서 futureArguments를 받을 때 해당 함수가 평가되는 것
 
+const thenifyAcc = (value, f) =>
+  value instanceof Promise ? value.then(f) : f(value);
+// reduce의 초기값이 프라미스일 때 그 값을 풀어주기 위함
+
+const reduceHelper = (acc, cur, f) =>
+  cur instanceof Promise ? cur.then(settled => f(acc, settled)) : f(acc, cur);
+// 얘를 recursive안에서 구현하니까 acc가 cur.then의 결과물인 Promise<pending>으로 잡히는 현상이 발생함;;
+// 비동기라서 cur.then안에서 잡히는 acc가 cur.then스스로이기 때문에 발생한 문제였음;;
+// 그래서 이렇게 함수로 분리하여 스코프를 구분해줘야 한다.
+
 const reduce = curry((f, accumulatedValue, iterable) => {
   if (!iterable) {
     iterable = accumulatedValue[Symbol.iterator]();
     accumulatedValue = iterable.next().value;
   }
-  for (const valueOfNext of iterable)
-    accumulatedValue = f(accumulatedValue, valueOfNext);
-  // 누적 값과 현재 값의 연산이라 이렇게 이름 지음
-  return accumulatedValue;
+  return thenifyAcc(accumulatedValue, function recursive(acc) {
+    for (let valueOfNext of iterable) {
+      acc = reduceHelper(acc, valueOfNext, f);
+      if (acc instanceof Promise) return acc.then(recursive);
+      // 만약 acc가 프라미스 값이라면 다시 recursive로 넘긴다.
+      // 그렇게 호출된 recursive에서도 iterable은 자신의 상태를 유지하고 있기 때문에
+      // 다음 순회값에 f를 적용할 수 있다.
+      // 굳이 이렇게 재귀 함수를 만들어 즉시 실행시키는 이유는,
+      // listProcessing을 진행하면서 프라미스로 값을 넘기지 않기 위해서이다.
+      // listProcessing의 과정 중에서 비동기 값 이후에 동기적으로 적용시킬 함수를 합성할 수도 있기 때문.
+      // 그리고 재귀라고 해도 비동기로 적용시키는 함수를 만날 때만 콜스택+1이 되는 것이기에
+      // 성능 상의 문제도 걱정하지 않아도 된다.
+    }
+    return acc;
+  });
 });
 // 자바스크립트 내장 객체인 String객체나
 // 웹 API인 NodeList 같은 경우는 이터러블 프로토콜을 따름에도 불구하고
