@@ -49,7 +49,7 @@ const curry = f => (callBack, ...restArguments) =>
 // 즉, map, filter, reduce함수에 callBack만 전달해두면,
 // listProcessing하면서 futureArguments를 받을 때 해당 함수가 평가되는 것
 
-const thenifyAcc = (value, f) =>
+const thenify = (value, f) =>
   value instanceof Promise ? value.then(f) : f(value);
 // reduce의 초기값이 프라미스일 때 그 값을 풀어주기 위함
 
@@ -60,23 +60,28 @@ const reduceHelper = (acc, cur, f) =>
 // 그래서 이렇게 함수로 분리하여 스코프를 구분해줘야 한다.
 
 const reduce = curry((f, accumulatedValue, iterable) => {
+  let wellFormedIterator;
   if (!iterable) {
-    iterable = accumulatedValue[Symbol.iterator]();
-    accumulatedValue = iterable.next().value;
+    wellFormedIterator = accumulatedValue[Symbol.iterator]();
+    accumulatedValue = wellFormedIterator.next().value;
+  } else {
+    wellFormedIterator = iterable[Symbol.iterator]();
   }
-  return thenifyAcc(accumulatedValue, function recursive(acc) {
-    for (let valueOfNext of iterable) {
-      acc = reduceHelper(acc, valueOfNext, f);
+  return thenify(accumulatedValue, function recursive(acc) {
+    let cur;
+    while (!(cur = wellFormedIterator.next()).done) {
+      const { value } = cur;
+      acc = reduceHelper(acc, value, f);
       if (acc instanceof Promise) return acc.then(recursive);
-      // 만약 acc가 프라미스 값이라면 다시 recursive로 넘긴다.
-      // 그렇게 호출된 recursive에서도 iterable은 자신의 상태를 유지하고 있기 때문에
-      // 다음 순회값에 f를 적용할 수 있다.
-      // 굳이 이렇게 재귀 함수를 만들어 즉시 실행시키는 이유는,
-      // listProcessing을 진행하면서 프라미스로 값을 넘기지 않기 위해서이다.
-      // listProcessing의 과정 중에서 비동기 값 이후에 동기적으로 적용시킬 함수를 합성할 수도 있기 때문.
-      // 그리고 재귀라고 해도 비동기로 적용시키는 함수를 만날 때만 콜스택+1이 되는 것이기에
-      // 성능 상의 문제도 걱정하지 않아도 된다.
     }
+    // 만약 acc가 프라미스 값이라면 다시 recursive로 넘긴다.
+    // 그렇게 호출된 recursive에서도 iterable은 자신의 상태를 유지하고 있기 때문에
+    // 다음 순회값에 f를 적용할 수 있다.
+    // 굳이 이렇게 재귀 함수를 만들어 즉시 실행시키는 이유는,
+    // listProcessing을 진행하면서 프라미스로 값을 넘기지 않기 위해서이다.
+    // listProcessing의 과정 중에서 비동기 값 이후에 동기적으로 적용시킬 함수를 합성할 수도 있기 때문.
+    // 그리고 재귀라고 해도 비동기로 적용시키는 함수를 만날 때만 콜스택+1이 되는 것이기에
+    // 성능 상의 문제도 걱정하지 않아도 된다.
     return acc;
   });
 });
@@ -140,12 +145,26 @@ const range = limit => {
 // 주어진 이터러블에서 최대 limit만큼만 잘라서 반환하는 함수
 const max = curry((limit, iterable) => {
   const response = [];
-  for (const valueOfNext of iterable) {
-    response.push(valueOfNext);
-    if (response.length == limit) return response;
-  }
-  // 이터러블의 모든 값을 순회해도 limit에 못 미치는 경우가 있으니
-  return response;
+  const wellFormedIterator = iterable[Symbol.iterator]();
+  return (function recursive() {
+    let cur;
+    while (!(cur = wellFormedIterator.next()).done) {
+      // for of문에서 return을 사용하면 제너레이터가 closed상태가 되는 상황이 발생
+      // for of문에서 return문을 사용할 경우 해당 이터레이터(제너레이터)의
+      // return메소드를 호출한다고 한다.
+      const { value } = cur;
+      if (value instanceof Promise)
+        return value.then(settled =>
+          // 이게 무슨 문법...?
+          (response.push(settled), response).length == limit
+            ? response
+            : recursive(),
+        );
+      response.push(value);
+      if (response.length == limit) return response;
+    }
+    return response;
+  })();
 });
 
 const takeAll = max(Infinity);
@@ -159,8 +178,10 @@ const Reserve = {
     for (let i = 0; i < limit; i++) yield i;
   },
   map: curry(function* (f, iterable) {
-    for (const valueOfNext of iterable) yield f(valueOfNext);
+    for (const valueOfNext of iterable) yield thenify(valueOfNext, f);
   }),
+  // map계열의 함수는 결과를 내는 함수가 아니기 때문에 yield값으로 Promise를 반환해도 된다.
+  // reduce나 max같이 결과를 내는 함수는 Promise값을 풀어주도록 구현
   filter: curry(function* (f, iterable) {
     for (const valueOfNext of iterable) if (f(valueOfNext)) yield valueOfNext;
     // next메소드를 호출할 때마다 다음 yield문까지 실행
@@ -293,3 +314,10 @@ module.exports = {
   deepFlatMap,
   Reserve,
 };
+
+// listProcessing(
+//   // [1, 2, 3],
+//   [Promise.resolve(3), Promise.resolve(9), Promise.resolve(10)],
+//   map(a => a * a),
+//   console.log,
+// );
