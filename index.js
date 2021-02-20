@@ -154,11 +154,13 @@ const max = curry((limit, iterable) => {
       // return메소드를 호출한다고 한다.
       const { value } = cur;
       if (value instanceof Promise)
-        return value.then(settled =>
-          // 이게 무슨 문법...?
-          (response.push(settled), response).length == limit
-            ? response
-            : recursive(),
+        return value.then(
+          settled =>
+            // 이게 무슨 문법...?
+            (response.push(settled), response).length == limit
+              ? response
+              : recursive(),
+          error => (error == ignore ? recursive() : Promise.reject(error)),
         );
       response.push(value);
       if (response.length == limit) return response;
@@ -170,6 +172,8 @@ const max = curry((limit, iterable) => {
 const takeAll = max(Infinity);
 
 const isIterable = a => a && a[Symbol.iterator];
+
+const ignore = Symbol('ignore');
 
 // 평가를 유보한다는 것은 바꿔 말하면 꼭 필요한 값만 평가하겠다는 것이 된다.
 // max나 reduce같은 함수와 결합했을 때 그때 그때 필요한 값만 평가하기 때문에 효율이 높다
@@ -183,10 +187,17 @@ const Reserve = {
   // map계열의 함수는 결과를 내는 함수가 아니기 때문에 yield값으로 Promise를 반환해도 된다.
   // reduce나 max같이 결과를 내는 함수는 Promise값을 풀어주도록 구현
   filter: curry(function* (f, iterable) {
-    for (const valueOfNext of iterable) if (f(valueOfNext)) yield valueOfNext;
+    for (const valueOfNext of iterable) {
+      const thenified = thenify(valueOfNext, f);
+      if (thenified instanceof Promise)
+        yield thenified.then(settled =>
+          settled ? valueOfNext : Promise.reject(ignore),
+        );
+      // settled가 true일 때 프라미스를 반환해도 어차피 다른 함수에서 then으로 풀어서 사용해주기 때문에 괜찮다.
+      // Kelisli 합성에 따라 다음 함수로 아예 인자가 전달되지 않도록 하기 위해 Promise.reject()를 사용
+      else if (thenified) yield valueOfNext;
+    }
     // next메소드를 호출할 때마다 다음 yield문까지 실행
-    // 즉, 이 경우 f(iterable)이 true일 때만 yield하므로
-    // f(iterable)이 false인 경우 f(iterable)
   }),
   *entries(obj) {
     for (const key in obj) yield [key, obj[key]];
@@ -316,8 +327,7 @@ module.exports = {
 };
 
 // listProcessing(
-//   // [1, 2, 3],
 //   [Promise.resolve(3), Promise.resolve(9), Promise.resolve(10)],
-//   map(a => a * a),
+//   filter(a => a % 2),
 //   console.log,
 // );
