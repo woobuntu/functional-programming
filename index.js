@@ -54,10 +54,9 @@ const reduce = curry((f, accumulatedValue, iterable) => {
     iterable = accumulatedValue[Symbol.iterator]();
     accumulatedValue = iterable.next().value;
   }
-  for (const valueOfNext of iterable) {
+  for (const valueOfNext of iterable)
     accumulatedValue = f(accumulatedValue, valueOfNext);
-    // 누적 값과 현재 값의 연산이라 이렇게 이름 지음
-  }
+  // 누적 값과 현재 값의 연산이라 이렇게 이름 지음
   return accumulatedValue;
 });
 // 자바스크립트 내장 객체인 String객체나
@@ -72,6 +71,7 @@ const reduce = curry((f, accumulatedValue, iterable) => {
 // console.log(reduce((a, b) => a + b, nums));
 
 const listProcessing = (...args) => reduce((iterable, f) => f(iterable), args);
+
 // listProcessing은
 // listProcessing(
 //   0,
