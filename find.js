@@ -1,6 +1,7 @@
 const curry = require('./curry');
 const Reserve = require('./Reserve');
 const max = require('./max');
+const listProcessing = require('./listProcessing');
 
 const find = curry((f, iterable) =>
   listProcessing(
