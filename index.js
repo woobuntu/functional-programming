@@ -1,4 +1,5 @@
 const Reserve = require('./Reserve');
+const Concurrent = require('./Concurrent');
 const compoundFunctions = require('./compoundFunctions');
 const curry = require('./curry');
 const deepFlat = require('./deepFlat');
@@ -41,10 +42,27 @@ module.exports = {
   thenify,
   Reserve,
 };
+
 listProcessing(
-  [1, 2, 3, 4],
-  Reserve.map(a => Promise.resolve(a * a)),
-  Reserve.filter(a => Promise.resolve(a % 2)),
-  reduce((a, b) => a + b),
+  [1, 2, 3, 4, 5],
+  Reserve.map(
+    a =>
+      new Promise(resolve => {
+        setTimeout(() => resolve(a), 1000);
+      }),
+  ),
+  Reserve.filter(
+    a =>
+      new Promise(resolve => {
+        setTimeout(() => resolve(a % 2), 1000);
+      }),
+  ),
+  Reserve.map(
+    a =>
+      new Promise(resolve => {
+        setTimeout(() => resolve(a * a), 1000);
+      }),
+  ),
+  Concurrent.reduce((a, b) => a + b),
   console.log,
 );
